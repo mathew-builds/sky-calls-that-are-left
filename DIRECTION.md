@@ -113,7 +113,7 @@ it was always tested over HTTP.
 - **Opened from `file://` with no server**, driven by Playwright directly. Renders, no console errors.
   Playwright's MCP wrapper refuses the `file:` scheme; Playwright itself does not, so it was driven
   through Node instead.
-- **`selftest.mjs`: 21 assertions across 6 scenarios, all pass.**
+- **`selftest.mjs`: 24 checks across 6 scenarios, all pass. Five are positive controls.**
 - 🔴 **Four of those assertions are positive controls, and they are the point.** The staleness guard
   fires on conflicting reads **and stays quiet on fresh ones**. The outage short-circuit fires when
   toggled on **and stays quiet when toggled off**. Checking that a gate fires proves nothing unless
@@ -168,7 +168,7 @@ identical either way because the first entry keeps its original stamp. Recalibra
 second contact logs **exactly one** entry and renumbers from `#1`. It now passes on the fixed build
 and fails on the pre-fix build.
 
-`selftest.mjs` now reports **21 of 21, zero failures**. The four new assertions are scenario 6, which reuses a single page on purpose because the rest of the harness opens a fresh one per scenario and therefore cannot see state carried between contacts. They fail on the pre-fix build, which is the only reason passing on the fixed one means anything.
+`selftest.mjs` now reports **24 of 24, zero failures**. The four new assertions are scenario 6, which reuses a single page on purpose because the rest of the harness opens a fresh one per scenario and therefore cannot see state carried between contacts. They fail on the pre-fix build, which is the only reason passing on the fixed one means anything.
 
 ### One thing that was deliberately NOT fixed
 

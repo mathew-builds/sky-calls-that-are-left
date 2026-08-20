@@ -15,7 +15,7 @@ direction of travel.)*
 Open `index.html`. That is the whole instruction. One file, no build, no dependencies, no server.
 
 ```
-node selftest.mjs     # 21 assertions across 6 scenarios, needs playwright
+node selftest.mjs     # 24 checks across 6 scenarios, needs playwright
 ```
 
 ## What is real here and what is not
@@ -59,10 +59,11 @@ counts twice as a win, the dashboard goes green, and actual volume is flat.
 That is the honest gap in most deflection programmes: the headline constraint is "do not break
 quality" and nothing in the design can observe whether quality broke.
 
-## Testing
+## How I know it works
 
-`selftest.mjs` drives six scenarios and asserts 21 things. **Six of those assertions are positive
-controls**, and they are the point:
+**This is not a test suite in the robustness sense, and the brief descoped that.** It is a small
+evaluation harness: six scenarios, and for each one, what had to be true for the run to count as
+correct. **24 checks. Five of them are positive controls**, and those are the point:
 
 - The staleness guard fires on conflicting reads, **and does not fire on fresh ones**
 - The outage short-circuit fires when toggled on, **and does not fire when toggled off**
