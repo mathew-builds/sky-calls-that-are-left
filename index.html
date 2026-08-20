@@ -1,0 +1,796 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sky: the calls that are left</title>
+<!--
+  One file. Classic script, no modules, no build, no dependencies, no server.
+  Double-click it and it opens. That matters: if the hosted link is down, or this arrives as an
+  attachment, it still has to work.
+-->
+<style>
+  :root{
+    --ink:#14171c; --dim:#5b6572; --dim2:#8a94a2; --line:#dfe3e9;
+    --bg:#f6f7f9; --card:#fff; --blue:#0b57a4; --blue-bg:#eaf2fb;
+    --ok:#15803d; --ok-bg:#eafaf0; --warn:#a16207; --warn-bg:#fdf7e7;
+    --stop:#b91c1c; --stop-bg:#fdeeee; --gap:#6d28d9; --gap-bg:#f4efff;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--ink);
+       font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+       padding:22px;max-width:1180px;margin:0 auto}
+
+  header{margin-bottom:14px}
+  h1{font-size:20px;font-weight:650;letter-spacing:-.01em}
+  .sub{color:var(--dim);font-size:13.5px;margin-top:4px}
+
+  .tabs{display:flex;gap:6px;border-bottom:1px solid var(--line);margin:16px 0 0}
+  .tab{background:none;border:0;border-bottom:2px solid transparent;padding:9px 15px;
+       font:600 14px inherit;color:var(--dim);cursor:pointer;margin-bottom:-1px}
+  .tab.on{color:var(--blue);border-bottom-color:var(--blue)}
+  .pane{display:none;padding-top:18px} .pane.on{display:block}
+
+  .ai{display:flex;gap:10px;align-items:flex-start;background:var(--blue-bg);
+      border:1px solid #c3ddf6;border-radius:9px;padding:11px 14px;margin-bottom:16px;font-size:13.5px}
+  .ai b{color:var(--blue)}
+  .ai .why{color:var(--dim);font-size:12.5px;margin-top:3px}
+
+  /* flow strip */
+  .strip{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}
+  .sc{flex:1;min-width:96px;background:var(--card);border:1px solid var(--line);
+      border-radius:8px;padding:8px 10px;position:relative;opacity:.45;transition:opacity .2s,border-color .2s}
+  .sc.on{opacity:1;border-color:var(--blue);box-shadow:0 0 0 2px var(--blue-bg)}
+  .sc.done{opacity:1;border-color:var(--ok)}
+  .sc.skip{opacity:.3}
+  .sc-n{font:650 9.5px var(--mono);color:var(--dim2);letter-spacing:.06em}
+  .sc-t{font-size:12px;font-weight:600;margin-top:2px;line-height:1.3}
+
+  .controls{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;
+            background:var(--card);border:1px solid var(--line);border-radius:11px;padding:15px;margin-bottom:18px}
+  label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.07em;
+        color:var(--dim2);font-weight:650;margin-bottom:5px}
+  select{font:14px inherit;padding:8px 10px;border:1px solid var(--line);border-radius:7px;
+         background:#fff;color:var(--ink);min-width:250px}
+  .chk{display:flex;gap:7px;align-items:center;font-size:13px;color:var(--dim);padding-bottom:9px}
+  button#run{background:var(--blue);color:#fff;border:0;border-radius:8px;padding:10px 22px;
+             font:650 14px inherit;cursor:pointer}
+  button#run:disabled{opacity:.45;cursor:default}
+
+  .cols{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:18px;align-items:start}
+  @media(max-width:900px){.cols{grid-template-columns:1fr}}
+
+  .step{background:var(--card);border:1px solid var(--line);border-left:3px solid var(--dim2);
+        border-radius:9px;padding:13px 15px;margin-bottom:11px}
+  .step.ok{border-left-color:var(--ok)} .step.warn{border-left-color:var(--warn)}
+  .step.stop{border-left-color:var(--stop)} .step.ask{border-left-color:var(--blue)}
+  .step.gap{border-left-color:var(--gap)}
+  .step-head{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+  .step-n{width:21px;height:21px;border-radius:50%;background:var(--bg);border:1px solid var(--line);
+          font:650 11px var(--mono);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .step-title{font-weight:650;font-size:14.5px;flex:1}
+  .step-state{font:650 10px var(--mono);text-transform:uppercase;letter-spacing:.07em;color:var(--dim2)}
+  .ok .step-state{color:var(--ok)} .warn .step-state{color:var(--warn)}
+  .stop .step-state{color:var(--stop)} .ask .step-state{color:var(--blue)}
+  .gap .step-state{color:var(--gap)}
+
+  .line{font-size:13.5px;line-height:1.55;margin-bottom:7px}
+  .line:last-child{margin-bottom:0}
+  .dim{color:var(--dim)}
+  .warn-line{background:var(--warn-bg);border-radius:6px;padding:8px 11px}
+  .stop-line{background:var(--stop-bg);border-radius:6px;padding:8px 11px}
+  .ok-line{background:var(--ok-bg);border-radius:6px;padding:8px 11px}
+  .gap-line{background:var(--gap-bg);border-radius:6px;padding:8px 11px}
+
+  .kv{display:flex;justify-content:space-between;gap:14px;padding:4px 0;
+      border-bottom:1px solid #eef1f5;font-size:13px}
+  .kv:last-child{border-bottom:0}
+  .kv span{color:var(--dim)} .kv b{font-family:var(--mono);font-size:12.5px}
+  .kv b.src{color:var(--blue);font-size:11.5px}
+
+  /* a context read, with where it came from and how old it is */
+  .read{background:var(--bg);border:1px solid var(--line);border-radius:7px;
+        padding:8px 11px;margin-bottom:5px;font-size:13px}
+  .read-top{display:flex;justify-content:space-between;gap:12px;align-items:baseline}
+  .read-v{font-family:var(--mono);font-size:12.5px}
+  .read-m{font:10.5px var(--mono);color:var(--dim2);margin-top:3px;letter-spacing:.02em}
+  .read.stale{border-color:#e9c46a;background:var(--warn-bg)}
+  .read.stale .read-m{color:var(--warn)}
+
+  .tag{font:650 9.5px var(--mono);text-transform:uppercase;letter-spacing:.06em;
+       padding:1.5px 6px;border-radius:4px;margin-left:6px}
+  .tag.satellite{background:#fdf7e7;color:var(--warn)}
+  .tag.ip{background:var(--blue-bg);color:var(--blue)}
+
+  pre.prompt{background:#0f1319;color:#d6dde8;border-radius:7px;padding:11px 13px;
+             font:11.5px/1.55 var(--mono);white-space:pre-wrap;overflow-x:auto;margin:8px 0}
+
+  .diag{display:flex;justify-content:space-between;gap:14px;padding:6px 10px;background:var(--bg);
+        border-radius:6px;margin-bottom:4px;font-size:13px}
+  .diag span{color:var(--dim);font-size:12px;text-align:right}
+  .diag.bad{background:var(--stop-bg)} .diag.bad span{color:var(--stop)}
+
+  .choices{display:flex;gap:9px;margin-top:9px;flex-wrap:wrap}
+  .choice{background:#fff;border:1px solid var(--line);border-radius:8px;padding:9px 14px;
+          font:600 13.5px inherit;cursor:pointer;text-align:left;color:var(--ink)}
+  .choice span{display:block;font-weight:400;font-size:11.5px;color:var(--dim2);margin-top:1px}
+  .choice:hover:not(:disabled){border-color:var(--blue)}
+  .choice:disabled{opacity:.4;cursor:default}
+  .choice.picked{border-color:var(--blue);background:var(--blue-bg);opacity:1}
+
+  aside{background:var(--card);border:1px solid var(--line);border-radius:11px;padding:16px;
+        position:sticky;top:22px}
+  aside h2{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--dim2);
+           font-weight:650;margin-bottom:5px}
+  aside .note{font-size:12px;color:var(--dim);line-height:1.5;margin-bottom:13px}
+  .logrow{border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-bottom:8px}
+  .logtop{display:flex;justify-content:space-between;gap:10px;font-size:13px;align-items:baseline}
+  .logtop span{font:11px var(--mono);color:var(--dim2)}
+  .logwhy{font-size:12px;color:var(--dim);margin-top:4px;line-height:1.45}
+  .logfoot{font:10.5px var(--mono);color:var(--dim2);margin-top:6px}
+  .logfoot a{color:var(--blue)}
+  code{font:11.5px var(--mono);background:var(--bg);padding:1px 5px;border-radius:4px}
+
+  /* ---------- architecture ---------- */
+  .legend{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:16px;font-size:12.5px;color:var(--dim)}
+  .legend b{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:6px}
+  .lg-y{background:var(--ok)} .lg-p{background:var(--warn)} .lg-n{background:var(--dim2)}
+
+  .layer{margin-bottom:11px;border:1px solid var(--line);border-radius:10px;background:var(--card);overflow:hidden}
+  .layer h3{margin:0;padding:9px 14px;font-size:11px;font-weight:650;letter-spacing:.09em;
+            text-transform:uppercase;color:var(--dim);background:var(--bg);
+            border-bottom:1px solid var(--line);display:flex;align-items:center;gap:9px}
+  .layer h3 .num{font-family:var(--mono);color:var(--dim2);font-size:10.5px;
+                 border:1px solid var(--line);border-radius:4px;padding:1px 5px;background:#fff}
+  .layer h3 .hint{margin-left:auto;text-transform:none;letter-spacing:0;font-weight:400;
+                  font-size:11.5px;color:var(--dim2)}
+  .nodes{display:flex;flex-wrap:wrap;gap:8px;padding:12px 14px}
+  .node{position:relative;text-align:left;font-family:inherit;background:#fff;
+        border:1px solid var(--line);border-left:3px solid var(--line);
+        border-radius:7px;padding:9px 12px;min-width:172px;color:var(--ink);flex:1}
+  .node[data-built=yes]{border-left-color:var(--ok)}
+  .node[data-built=partial]{border-left-color:var(--warn)}
+  .node[data-built=no]{border-left-color:var(--dim2);background:#fafbfc}
+  .node .nm{display:block;font-size:13px;font-weight:600;margin-bottom:3px}
+  .node .meta{font:10.5px var(--mono);color:var(--dim2);letter-spacing:.02em}
+  .node .st{font:650 9.5px var(--mono);text-transform:uppercase;letter-spacing:.06em;float:right}
+  .node[data-built=yes] .st{color:var(--ok)}
+  .node[data-built=partial] .st{color:var(--warn)}
+  .node[data-built=no] .st{color:var(--dim2)}
+
+  .crux{background:var(--blue-bg);border:1px solid #c3ddf6;border-radius:10px;
+        padding:15px 17px;margin:18px 0}
+  .crux h3{font-size:14.5px;font-weight:650;margin-bottom:7px;color:var(--blue)}
+  .crux p{font-size:13.5px;line-height:1.6;color:var(--ink);margin-bottom:8px}
+  .crux p:last-child{margin-bottom:0}
+  .crux p.cite{font-size:12.5px;color:var(--dim);border-top:1px solid #c3ddf6;padding-top:9px;margin-top:11px}
+
+  .split{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin:12px 0 13px}
+  @media(max-width:760px){.split{grid-template-columns:1fr}}
+  .sp{background:#fff;border:1px solid var(--line);border-top:3px solid var(--ok);
+      border-radius:8px;padding:11px 12px}
+  .sp.mid{border-top-color:var(--warn)} .sp.hot{border-top-color:var(--stop)}
+  .sp-k{display:block;font:650 10.5px var(--mono);text-transform:uppercase;letter-spacing:.06em;
+        color:var(--ok);margin-bottom:6px}
+  .sp.mid .sp-k{color:var(--warn)} .sp.hot .sp-k{color:var(--stop)}
+  .sp-v{display:block;font-size:12.5px;color:var(--ink);margin-bottom:7px;line-height:1.45}
+  .sp-r{display:block;font-size:12px;color:var(--dim);line-height:1.45}
+
+  footer{margin-top:22px;padding-top:14px;border-top:1px solid var(--line);
+         font-size:12px;color:var(--dim2);line-height:1.6}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Sky: the calls that are left</h1>
+  <div class="sub">A working slice. Sky already answers questions, so this one does things instead.</div>
+  <div class="tabs">
+    <button class="tab on" data-p="demo">The demo</button>
+    <button class="tab" data-p="arch">How it would actually be built</button>
+  </div>
+</header>
+
+<!-- ================= DEMO ================= -->
+<div class="pane on" id="p-demo">
+
+  <div class="ai">
+    <div>
+      <b>You are talking to an AI.</b> A person is available at any point.
+      <div class="why">Said first, every time. EU AI Act Article 50 has applied since 2 August 2026,
+        and Sky operates in Ireland and Italy. This is not a disclaimer, it is the first turn.</div>
+    </div>
+  </div>
+
+  <div class="strip" id="strip"></div>
+
+  <div class="controls">
+    <div>
+      <label>What the customer said</label>
+      <select id="msg"></select>
+    </div>
+    <div>
+      <label>Who is calling</label>
+      <select id="caller"></select>
+    </div>
+    <label class="chk"><input type="checkbox" id="showWrong"> Show what happens if you guess the box</label>
+    <label class="chk"><input type="checkbox" id="outage"> Regional outage happening now</label>
+    <button id="run">Run</button>
+  </div>
+
+  <div class="cols">
+    <main id="flow"></main>
+    <aside>
+      <h2>Action log</h2>
+      <div class="note">Every action carries its reason and can be contested. A system that acts on an
+        account, rather than advising about one, has to carry that under the UK automated decision
+        rules from 5 February 2026.</div>
+      <div id="log"></div>
+    </aside>
+  </div>
+</div>
+
+<!-- ================= ARCHITECTURE ================= -->
+<div class="pane" id="p-arch">
+  <div class="crux">
+    <h3>The question this page exists to answer</h3>
+    <p><b>Does the agent read the operational system of record, or a curated layer beside it?</b>
+      Both, and the line is drawn by <b>consequence</b> rather than by data type. That distinction is
+      the whole design.</p>
+    <div class="split">
+      <div class="sp">
+        <span class="sp-k">Shapes the conversation</span>
+        <span class="sp-v">Which article to offer, prior contact history, the troubleshooting tree</span>
+        <span class="sp-r">Curated layer, stated freshness budget. An hour stale changes the wording, not the outcome</span>
+      </div>
+      <div class="sp mid">
+        <span class="sp-k">Gates an action</span>
+        <span class="sp-v">Does this person have authority, is this box on this account, is the service live</span>
+        <span class="sp-r">Re-read from the owning system <b>at the moment of the action</b>, not at the start of the conversation</span>
+      </div>
+      <div class="sp hot">
+        <span class="sp-k">The customer is held to it</span>
+        <span class="sp-v">Contract state, charges, entitlement</span>
+        <span class="sp-r">A stale read here is a customer detriment, and in a UK regulated telco potentially a compensation event</span>
+      </div>
+    </div>
+    <p><b>The middle column is where staleness lives.</b> Entitlement reconciles from billing
+      overnight. Device state arrives from telemetry on its own cadence. A customer who upgraded
+      yesterday exists differently in each, and the demo shows what happens when they disagree: the
+      agent refuses to act on either and re-reads before committing. The mechanism is ordinary
+      optimistic concurrency, a conditional write that fails if the state moved underneath it. I am
+      describing the mechanism rather than claiming a named industry pattern, because there is not
+      one.</p>
+    <p class="cite"><b>Grounded in:</b> AWS Prescriptive Guidance,
+      <i>Agentic AI architecture in the enterprise</i> (applications and agents layers, the tools
+      gateway pattern) and TM Forum's agentic AI framework on ODA, which names a
+      <b>Semantic Context Layer</b> and a <b>Human-in-the-Loop Gate</b> that exits before any write
+      if confirmation is missing. Accenture publish <b>AI Refinery</b> and the <b>distiller</b> agentic framework, both with public
+      SDK docs. What I could not find was a <b>layered reference architecture</b> at this tier to map a
+      contact journey onto, so the layers below borrow TM Forum's telco vocabulary rather than
+      inventing one.</p>
+  </div>
+
+  <div class="legend">
+    <span><b class="lg-y"></b>Real in this demo</span>
+    <span><b class="lg-p"></b>Faked here, would be a real integration</span>
+    <span><b class="lg-n"></b>Not built, named so the absence is deliberate</span>
+  </div>
+
+  <div id="arch"></div>
+
+  <footer style="margin-top:20px">
+    The layer names borrow TM Forum's agentic framework for ODA and AWS Prescriptive Guidance. The
+    specific choices, and everything marked faked or not built, are mine. I would expect to be
+    corrected on them by anyone who knows Sky's estate, and the operator standard for managed devices
+    is TR-069 or its successor TR-369, though I do not know what Sky actually runs.
+  </footer>
+</div>
+
+<footer>
+  Built against Sky's live help pages, scraped 20 August 2026. Platform split confirmed from
+  <code>sky.com/help/articles/sky-tv-no-satellite-signal</code>, which offers Sky+, Sky Q and
+  Sky Q Mini only. Accounts and service instances are synthetic: none of that is public.
+  Classification prompts are real, responses are recorded and replayed, and the prompt is shown
+  on screen. One file, no build, no dependencies. No polish, no error handling, no tests.
+  Deliberately.
+</footer>
+
+<script>
+/* ==========================================================================
+   DATA
+   ========================================================================== */
+
+/* Sky's four TV platforms across two delivery models.
+   Confirmed live: sky.com/help/articles/sky-tv-no-satellite-signal offers exactly three device
+   pickers (Sky+, Sky Q, Sky Q Mini box). No Glass. No Stream. The satellite diagnostic does not
+   merely differ on IP platforms, it does not exist. */
+var PLATFORMS = {
+  'sky-q':      { label:'Sky Q',      delivery:'satellite' },
+  'sky-plus':   { label:'Sky+',       delivery:'satellite' },
+  'sky-glass':  { label:'Sky Glass',  delivery:'ip' },
+  'sky-stream': { label:'Sky Stream', delivery:'ip' }
+};
+
+/* A household is not a platform. One account, many service instances, each on its own platform. */
+var ACCOUNT = {
+  id:'ACC-4471', holder:'J. Whitfield',
+  authorised:['J. Whitfield','A. Whitfield'],
+  instances:[
+    { id:'SI-88213', platform:'sky-q',      room:'Living room' },
+    { id:'SI-88214', platform:'sky-stream', room:'Bedroom' }
+  ],
+  contractState:null   /* deliberate gap 1: not readable here */
+};
+
+var CALLERS = [
+  { name:'J. Whitfield', note:'account holder' },
+  { name:'A. Whitfield', note:'named on the account' },
+  { name:'R. Doyle',     note:'not named on the account' }
+];
+
+/* The classification step needs a model. A static page cannot safely hold an API key, so the prompt
+   is real and the response is recorded and replayed. The prompt is shown so it can be read. */
+var PROMPT =
+ 'You are triaging an inbound contact for a UK pay-TV and broadband provider.\n\n' +
+ 'Return JSON only:\n' +
+ '{ "intent": one of [fault_picture, fault_no_signal, fault_broadband, billing, cancel, other],\n' +
+ '  "needs_service_instance": boolean,   // does answering require knowing WHICH box?\n' +
+ '  "acts_on_account": boolean,          // would resolving this change something on the account?\n' +
+ '  "confidence": 0-1 }\n\n' +
+ 'Contact: "<<<MESSAGE>>>"';
+
+var RECORDED = {
+  'my picture keeps breaking up':
+    { intent:'fault_picture',   needs:true,  acts:true,  conf:0.82 },
+  'no satellite signal on my box':
+    { intent:'fault_no_signal', needs:true,  acts:true,  conf:0.91 },
+  'my telly has gone funny':
+    { intent:'fault_picture',   needs:true,  acts:true,  conf:0.54 },
+  'i upgraded yesterday and now nothing works':
+    { intent:'fault_picture',   needs:true,  acts:true,  conf:0.77, stale:true },
+  'i want to cancel my sky tv':
+    { intent:'cancel',          needs:false, acts:true,  conf:0.95 },
+  'why is my bill higher this month':
+    { intent:'billing',         needs:false, acts:false, conf:0.88 }
+};
+
+/* Context reads. Each one knows where it came from and how old it is, because that is the thing
+   that decides whether it can be acted on. */
+var READS = {
+  normal:[
+    { k:'account',     v:'ACC-4471 · J. Whitfield', src:'CRM',       age:'live',              stale:false },
+    { k:'entitlement', v:'Sky TV + Broadband',      src:'billing',   age:'reconciled 03:00 · 14h old', stale:false },
+    { k:'device state',v:'2 instances active',      src:'telemetry', age:'5 min old',         stale:false }
+  ],
+  staleUpgrade:[
+    { k:'account',     v:'ACC-4471 · J. Whitfield', src:'CRM',       age:'live',              stale:false },
+    { k:'entitlement', v:'Sky Glass · activated yesterday 16:40', src:'billing', age:'reconciled 03:00 · 14h old', stale:false },
+    { k:'device state',v:'Sky Q active · no Glass device seen',   src:'telemetry', age:'reconciled 03:00 · 14h old', stale:true }
+  ]
+};
+
+var DIAGNOSTICS = {
+  satellite:{
+    source:'sky.com/help/articles/sky-tv-no-satellite-signal',
+    note:'Article offers Sky+, Sky Q and Sky Q Mini only',
+    steps:[
+      ['Check the on-screen error code','Sky reports these as on-screen messages'],
+      ['Check the cable from the dish into the box','Physical, satellite only'],
+      ['Check for a signal fault on the dish','No equivalent on an IP platform'],
+      ['Reboot the box','Remote action, safe to take']
+    ],
+    action:'Reboot the box remotely'
+  },
+  ip:{
+    source:'sky.com/help/articles/setting-up-sky-stream',
+    note:'IP delivery: no dish exists, so no dish check exists',
+    steps:[
+      ['Check broadband is up','The whole delivery path'],
+      ['Check the puck or TV is on the network','Wi-Fi or ethernet'],
+      ['Check for a streaming service fault','Platform-side, not premises-side'],
+      ['Re-send activation to the device','Remote action, safe to take']
+    ],
+    action:'Re-send activation to the device'
+  }
+};
+
+var OUTAGE = {
+  id:'INC-20418', area:'Bristol and South West',
+  cause:'Streaming delivery fault', started:'19:42', affected:'~41,000 premises',
+  eta:'Engineers on site, next update 21:00'
+};
+
+var STEP_LABELS = ['Read it','Which box','Allowed?','Diagnose','Act','Gaps'];
+
+var ARCH = [
+  { n:'Entry', hint:'where the contact arrives', nodes:[
+    ['Help page assistant','Sky already runs one here','partial'],
+    ['App and IVR','Same agent, different surface','no']
+  ]},
+  { n:'Understanding', hint:'the only part that needs a model', nodes:[
+    ['Intent classifier','LLM. Prompt shown in the demo','yes'],
+    ['Clarify loop','Ask once when confidence is low','no']
+  ]},
+  { n:'Identity and authority', hint:'two separate questions', nodes:[
+    ['Identity','Who is this','partial'],
+    ['Authority','May they act. Not the same thing','yes']
+  ]},
+  { n:'Semantic context layer', hint:"TM Forum's term for this tier", nodes:[
+    ['Curated read tier','Shaped, governed context. Not the system of record','partial'],
+    ['Freshness metadata','Every read carries source and age','yes'],
+    ['Staleness guard','Refuses to act when reads disagree','yes']
+  ]},
+  { n:'Situational awareness', hint:'before any individual diagnosis', nodes:[
+    ['Incident feed','Known outages short-circuit the queue','yes'],
+    ['Demand shaping','Correlated contacts collapse to one answer','partial']
+  ]},
+  { n:'Diagnosis', hint:'keyed on delivery model, not product name', nodes:[
+    ['Platform-correct paths','Built from Sky help content','yes'],
+    ['Device telemetry probe','Live check at point of action','no']
+  ]},
+  { n:'Action', hint:'the write path, narrow on purpose', nodes:[
+    ['Tool catalog','Fixed allow-list of callable capabilities','partial'],
+    ['Human-in-the-loop gate','TM Forum: exits before write if confirmation is missing','partial'],
+    ['Conditional write','Optimistic concurrency. Fails if state moved underneath','no']
+  ]},
+  { n:'Handoff', hint:'where projects like this usually die', nodes:[
+    ['Advisor desktop integration','Unknown estate. The real risk','no'],
+    ['Context package','Diagnosis travels with the handoff','yes']
+  ]},
+  { n:'Audit', hint:'not a log file, a product requirement', nodes:[
+    ['Action log with reasons','Every action, why, reversible','yes'],
+    ['Contest and human review','Required where software acts','yes'],
+    ['Evaluation harness','Labelled sample plus holdout','no']
+  ]}
+];
+
+/* ==========================================================================
+   APP
+   ========================================================================== */
+function $(s){ return document.querySelector(s); }
+function el(tag,cls,html){ var n=document.createElement(tag); if(cls)n.className=cls;
+  if(html!==undefined)n.innerHTML=html; return n; }
+function wait(ms){ return new Promise(function(r){ setTimeout(r,ms); }); }
+function esc(s){ return String(s).replace(/[&<>]/g,function(c){
+  return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c]; }); }
+
+var auditLog=[], tick=0, stepIndex=0;
+function stamp(){ tick+=7; return 'T+'+String(tick).padStart(3,'0')+'s'; }
+
+function logAction(o){
+  var e={ seq:auditLog.length+1, action:o.action, reason:o.reason, reversible:o.reversible, at:stamp() };
+  auditLog.push(e); renderLog(); return e;
+}
+function renderLog(){
+  var box=$('#log'); box.innerHTML = auditLog.length ? '' : '<div class="dim">Nothing yet.</div>';
+  auditLog.forEach(function(e){
+    box.appendChild(el('div','logrow',
+      '<div class="logtop"><b>#'+e.seq+' '+esc(e.action)+'</b><span>'+e.at+'</span></div>'+
+      '<div class="logwhy">'+esc(e.reason)+'</div>'+
+      '<div class="logfoot">'+(e.reversible?'reversible':'not reversible')+
+      ' &middot; <a href="#" onclick="return false">contest this</a></div>'));
+  });
+}
+
+/* flow strip */
+function renderStrip(active,doneTo,skipped){
+  var s=$('#strip'); s.innerHTML='';
+  STEP_LABELS.forEach(function(t,i){
+    var cls='sc';
+    if(skipped && skipped.indexOf(i)>-1) cls+=' skip';
+    else if(i<doneTo) cls+=' done';
+    else if(i===active) cls+=' on';
+    s.appendChild(el('div',cls,'<div class="sc-n">'+(i+1)+'</div><div class="sc-t">'+t+'</div>'));
+  });
+}
+
+function step(title,state){
+  stepIndex++;
+  var node=el('div','step '+(state||'run'));
+  node.innerHTML='<div class="step-head"><span class="step-n">'+stepIndex+'</span>'+
+    '<span class="step-title">'+esc(title)+'</span><span class="step-state"></span></div>'+
+    '<div class="step-body"></div>';
+  $('#flow').appendChild(node);
+  node.scrollIntoView({behavior:'smooth',block:'end'});
+  return {
+    body:node.querySelector('.step-body'),
+    set:function(st,label){ node.className='step '+st;
+      node.querySelector('.step-state').textContent=label||''; },
+    add:function(html,cls){ this.body.appendChild(el('div',cls||'line',html)); }
+  };
+}
+
+/* ---- context reads, with provenance ---- */
+function showReads(s,set){
+  set.forEach(function(r){
+    s.add('<div class="read'+(r.stale?' stale':'')+'">'+
+      '<div class="read-top"><span>'+esc(r.k)+'</span>'+
+      '<span class="read-v">'+esc(r.v)+'</span></div>'+
+      '<div class="read-m">'+esc(r.src)+' &middot; '+esc(r.age)+(r.stale?' &middot; STALE':'')+'</div></div>','line');
+  });
+}
+
+/* ---- 1. classify ---- */
+async function classify(message){
+  renderStrip(0,0);
+  var s=step('Read what the customer said');
+  s.add('<span class="dim">This step needs a model. A static page cannot safely hold an API key, so '+
+    'the prompt below is real and the response is recorded and replayed. The prompt is here to be '+
+    'read rather than taken on trust.</span>');
+  s.add('<pre class="prompt">'+esc(PROMPT.replace('<<<MESSAGE>>>',message))+'</pre>');
+  await wait(600);
+  var r=RECORDED[message.trim().toLowerCase()];
+  if(!r){ s.set('warn','no recording');
+    s.add('<b>No recorded response for that phrasing.</b> This is a replay, not a live model.','line warn-line');
+    return null; }
+  s.set('ok','done');
+  s.add('<div class="kv"><span>intent</span><b>'+r.intent+'</b></div>'+
+        '<div class="kv"><span>needs to know which box</span><b>'+r.needs+'</b></div>'+
+        '<div class="kv"><span>acts on the account</span><b>'+r.acts+'</b></div>'+
+        '<div class="kv"><span>confidence</span><b>'+r.conf+'</b></div>');
+  if(r.conf<0.6) s.add('<b>Low confidence.</b> "'+esc(message)+'" is vague. A real deployment would ask '+
+    'one clarifying question here rather than proceed. Flagged instead of hidden.','line warn-line');
+  return r;
+}
+
+/* ---- outage short-circuit: before any individual diagnosis ---- */
+async function outageCheck(){
+  renderStrip(1,1);
+  var s=step('Check for a known incident first','ask');
+  await wait(350);
+  s.set('stop','known outage');
+  s.add('<div class="kv"><span>incident</span><b>'+OUTAGE.id+'</b></div>'+
+        '<div class="kv"><span>area</span><b>'+OUTAGE.area+'</b></div>'+
+        '<div class="kv"><span>cause</span><b>'+OUTAGE.cause+'</b></div>'+
+        '<div class="kv"><span>affected</span><b>'+OUTAGE.affected+'</b></div>');
+  s.add('<b>Stop here. Do not diagnose.</b> Saturday evening, live sport, a regional streaming fault: '+
+    'thousands of contacts arrive within minutes and they all share one root cause. Running an '+
+    'individual diagnostic on each one is the largest cost spike in the system and the least useful '+
+    'thing it can do.','line stop-line');
+  s.add('The customer gets the status and the next update time. '+esc(OUTAGE.eta)+
+    ' One answer, produced once, served to everyone affected.','line ok-line');
+  logAction({ action:'Answered from incident '+OUTAGE.id, reversible:false,
+    reason:'Known regional outage matched before individual diagnosis. No per-contact diagnostic run.' });
+  return true;
+}
+
+/* ---- 2. service instance, not account ---- */
+async function resolveInstance(reads){
+  renderStrip(1,1);
+  var s=step('Work out which box they are actually calling about');
+  await wait(350);
+  s.add('<span class="dim">Context reads. Each one carries where it came from and how old it is.</span>');
+  showReads(s,reads);
+
+  var stale=reads.filter(function(r){ return r.stale; });
+  if(stale.length){
+    s.set('stop','conflict');
+    s.add('<b>Entitlement and device state disagree, and one of them is stale.</b> Billing says the '+
+      'customer is on Sky Glass since yesterday afternoon. Telemetry last reconciled at 03:00 and '+
+      'still shows a Sky Q box. Both reads are doing their job; they are just on different cadences.',
+      'line stop-line');
+    await wait(400);
+    s.add('<b>So the agent does not pick one.</b> Guessing Glass runs an IP diagnostic against a box '+
+      'that may still be the one in the room. Guessing Q runs a dish check on a device with no dish. '+
+      'Either way it asks the customer questions they cannot answer.','line warn-line');
+    s.add('<b>It re-verifies at the point of action instead</b>, and until that returns it will not '+
+      'act on either state. That is the whole difference between a system that reads a warehouse and '+
+      'one that is allowed to change things.','line ok-line');
+    logAction({ action:'Refused to act on stale state', reversible:false,
+      reason:'Entitlement (billing, 14h) conflicts with device state (telemetry, 14h). Re-verification required before any action.' });
+    return null;
+  }
+
+  s.add('This account has <b>'+ACCOUNT.instances.length+'</b> service instances:');
+  s.add(ACCOUNT.instances.map(function(i){
+    return '<div class="kv"><span>'+i.id+' &middot; '+i.room+'</span><b>'+PLATFORMS[i.platform].label+
+      '<span class="tag '+PLATFORMS[i.platform].delivery+'">'+PLATFORMS[i.platform].delivery+'</span></b></div>';
+  }).join(''));
+  s.set('ask','needs the customer');
+  s.add('<b>Both estates, one household.</b> Resolving "the account" is not enough, and guessing here '+
+    'is the most expensive mistake available: the satellite diagnostic does not exist on an IP platform.',
+    'line warn-line');
+
+  return new Promise(function(resolve){
+    var box=el('div','choices');
+    ACCOUNT.instances.forEach(function(i){
+      var b=el('button','choice',PLATFORMS[i.platform].label+'<span>'+i.room+'</span>');
+      b.onclick=function(){
+        box.querySelectorAll('button').forEach(function(x){ x.disabled=true; });
+        b.classList.add('picked'); s.set('ok','resolved'); resolve(i);
+      };
+      box.appendChild(b);
+    });
+    s.body.appendChild(box);
+  });
+}
+
+/* ---- 3. authority, separate from identity ---- */
+async function checkAuthority(caller,willAct){
+  renderStrip(2,2);
+  var s=step('Check this person is allowed to change things');
+  await wait(300);
+  var known=ACCOUNT.authorised.indexOf(caller)>-1;
+  s.add('<div class="kv"><span>caller</span><b>'+esc(caller)+'</b></div>'+
+        '<div class="kv"><span>named on the account</span><b>'+known+'</b></div>'+
+        '<div class="kv"><span>this contact would change something</span><b>'+willAct+'</b></div>');
+  if(!willAct){ s.set('ok','not needed');
+    s.add('Nothing here changes the account, so authority is not required. Identity and authority are '+
+      'different questions and only one of them is needed.'); return true; }
+  if(!known){ s.set('stop','blocked');
+    s.add('<b>Not authorised.</b> This person can be helped with information. They cannot be the one '+
+      'who changes the account. That is not a technical limit, it is who Sky is allowed to let act.',
+      'line stop-line'); return false; }
+  s.set('ok','authorised'); return true;
+}
+
+/* ---- 4. diagnose, keyed on delivery model ---- */
+async function diagnose(instance){
+  renderStrip(3,3);
+  var p=PLATFORMS[instance.platform], d=DIAGNOSTICS[p.delivery];
+  var s=step('Run the check that fits a '+p.label);
+  await wait(350);
+  s.add('<div class="kv"><span>platform</span><b>'+p.label+'</b></div>'+
+        '<div class="kv"><span>delivery</span><b>'+p.delivery+'</b></div>'+
+        '<div class="kv"><span>informed by</span><b class="src">'+d.source+'</b></div>');
+  s.add('<span class="dim">'+d.note+'. The platform split is Sky\'s. <b>The ordering of the '+
+    'steps below is mine</b>, not lifted from that article.</span>');
+  for(var i=0;i<d.steps.length;i++){
+    await wait(230);
+    s.add('<div class="diag"><b>'+d.steps[i][0]+'</b><span>'+d.steps[i][1]+'</span></div>');
+  }
+  s.set('ok','done'); return d;
+}
+
+async function diagnoseWrong(instance){
+  var p=PLATFORMS[instance.platform];
+  var wrong = p.delivery==='satellite' ? 'ip' : 'satellite';
+  var d=DIAGNOSTICS[wrong];
+  var s=step('What happens if you skip step 2 and guess','stop');
+  await wait(280);
+  s.add('<b>Assume the whole account is '+wrong+'.</b> The customer is on a '+p.label+'.','line stop-line');
+  for(var i=0;i<3;i++){
+    await wait(180);
+    s.add('<div class="diag bad"><b>'+d.steps[i][0]+'</b><span>meaningless on a '+p.label+'</span></div>');
+  }
+  s.set('stop','nonsense');
+  s.add('Three questions the customer cannot answer, and no diagnosis. That is what resolving the '+
+    'account instead of the instance actually costs.','line stop-line');
+}
+
+/* ---- 5. act ---- */
+async function takeAction(d,instance){
+  renderStrip(4,4);
+  var s=step('Do it');
+  await wait(300);
+  var e=logAction({ action:d.action, reversible:true,
+    reason:'Diagnostic for '+PLATFORMS[instance.platform].delivery+' delivery completed on '+instance.id });
+  s.set('ok','done');
+  s.add('<div class="kv"><span>action</span><b>'+d.action+'</b></div>'+
+        '<div class="kv"><span>on</span><b>'+instance.id+'</b></div>'+
+        '<div class="kv"><span>logged as</span><b>#'+e.seq+'</b></div>');
+  s.add('Logged with its reason, and reversible. A person can contest it from the log.');
+}
+
+/* ---- cancellation ---- */
+async function handleCancel(){
+  renderStrip(3,3,[1]);
+  var s=step('Cancellation');
+  await wait(320);
+  s.add('<span class="dim">Ofcom Fairness for Customers, commitment 5, 2019. Sky is a signatory: '+
+    'customers leaving must not face additional barriers or hassle compared to those signing up.</span>');
+  s.add('<b>So this does not route to a human queue.</b> Joining Sky is instant and self-serve. Making '+
+    'leaving mean holding on the phone is the thing the commitment exists to prevent.','line ok-line');
+  await wait(350);
+  s.add('<div class="kv"><span>retention save attempt</span><b>none</b></div>'+
+        '<div class="kv"><span>completes here</span><b>yes</b></div>');
+  logAction({ action:'Cancellation processed', reversible:true,
+    reason:'Customer requested cancellation. Completed inline per Ofcom fairness commitment 5.' });
+  s.set('ok','done');
+  s.add('<b>Scope limit, stated because it matters:</b> the binding rule is One Touch Switch, live '+
+    'since September 2024, and it covers broadband and landline, not pay-TV. This is the voluntary '+
+    'commitment, not the statutory instrument.','line warn-line');
+  s.add('<b>Gap:</b> contract state is not readable here, so this cannot tell an in-contract customer '+
+    'from an out-of-contract one. That is the fork that decides whether an early-termination charge '+
+    'applies.','line gap-line');
+}
+
+/* ---- orchestration ---- */
+async function run(message,caller){
+  $('#flow').innerHTML=''; stepIndex=0; $('#run').disabled=true;
+  /* Each run is a separate contact. Without this the log accumulates across scenarios and
+     shows one household rebooted twice, refused, and cancelled inside the same 35 seconds. */
+  auditLog=[]; tick=0; renderLog();
+
+  var cls=await classify(message);
+  if(!cls){ finish(); return; }
+
+  if(cls.intent==='cancel'){
+    var ok=await checkAuthority(caller,true);
+    if(ok) await handleCancel();
+    finish(); return;
+  }
+
+  if($('#outage').checked && cls.intent!=='billing'){
+    await outageCheck(); finish(); return;
+  }
+
+  if(!cls.needs){
+    renderStrip(1,1,[1]);
+    var s=step('No box involved'); s.set('ok','skipped');
+    s.add('This contact does not depend on which box they have, so resolving one would be ceremony. '+
+      'Not every contact needs every step.');
+    finish(); return;
+  }
+
+  var instance=await resolveInstance(cls.stale ? READS.staleUpgrade : READS.normal);
+  if(!instance){ finish(); return; }   /* stale conflict stopped it */
+
+  var authorised=await checkAuthority(caller,cls.acts);
+  if($('#showWrong').checked) await diagnoseWrong(instance);
+  var d=await diagnose(instance);
+
+  if(!authorised){
+    renderStrip(4,4);
+    var h=step('Hand over'); h.set('warn','handed off');
+    h.add('Diagnosis is done and travels with the handover, so the advisor does not start again. The '+
+      'action itself needs someone who is allowed to take it.');
+    logAction({ action:'Handed to advisor', reversible:false,
+      reason:'Diagnosis complete; caller not authorised to act on the account' });
+  } else {
+    await takeAction(d,instance);
+  }
+  finish();
+}
+
+function finish(){
+  renderStrip(5,5);
+  var s=step('What this does not know'); s.set('gap','on purpose');
+  s.add('<b>1. It cannot see contract state.</b> So it cannot tell an in-contract customer from an '+
+    'out-of-contract one.','line gap-line');
+  s.add('<b>2. It does not know what the Virtual Assistant already tried.</b> So it may repeat it, and '+
+    'the customer would notice before anyone else did.','line gap-line');
+  $('#run').disabled=false;
+}
+
+/* ---- architecture ---- */
+function renderArch(){
+  var box=$('#arch');
+  ARCH.forEach(function(L,i){
+    var d=el('div','layer');
+    d.innerHTML='<h3><span class="num">'+(i+1)+'</span>'+L.n+'<span class="hint">'+L.hint+'</span></h3>'+
+      '<div class="nodes">'+L.nodes.map(function(n){
+        var st = n[2]==='yes'?'real':(n[2]==='partial'?'faked':'not built');
+        return '<div class="node" data-built="'+n[2]+'"><span class="st">'+st+'</span>'+
+               '<span class="nm">'+n[0]+'</span><span class="meta">'+n[1]+'</span></div>';
+      }).join('')+'</div>';
+    box.appendChild(d);
+  });
+}
+
+/* ---- wire up ---- */
+(function init(){
+  var sel=$('#msg');
+  Object.keys(RECORDED).forEach(function(k){
+    var o=document.createElement('option'); o.value=k; o.textContent=k; sel.appendChild(o);
+  });
+  var who=$('#caller');
+  CALLERS.forEach(function(c){
+    var o=document.createElement('option'); o.value=c.name; o.textContent=c.name+' ('+c.note+')';
+    who.appendChild(o);
+  });
+  $('#run').onclick=function(){ run(sel.value,who.value); };
+  document.querySelectorAll('.tab').forEach(function(t){
+    t.onclick=function(){
+      document.querySelectorAll('.tab').forEach(function(x){ x.classList.remove('on'); });
+      document.querySelectorAll('.pane').forEach(function(x){ x.classList.remove('on'); });
+      t.classList.add('on'); $('#p-'+t.dataset.p).classList.add('on');
+    };
+  });
+  renderStrip(-1,0); renderLog(); renderArch();
+})();
+</script>
+</body>
+</html>
