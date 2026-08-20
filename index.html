@@ -687,9 +687,16 @@ async function handleCancel(){
     'leaving mean holding on the phone is the thing the commitment exists to prevent.','line ok-line');
   await wait(350);
   s.add('<div class="kv"><span>retention save attempt</span><b>none</b></div>'+
-        '<div class="kv"><span>completes here</span><b>yes</b></div>');
-  logAction({ action:'Cancellation processed', reversible:true,
-    reason:'Customer requested cancellation. Completed inline per Ofcom fairness commitment 5.' });
+        '<div class="kv"><span>request completes here</span><b>yes, no queue</b></div>'+
+        '<div class="kv"><span>notice period</span><b>31 days (Sky\'s own terms)</b></div>'+
+        '<div class="kv"><span>early termination charge</span><b class="src">unknown, contract state not readable</b></div>');
+  /* NOT reversible. A cancellation starts a 31-day notice period and may trigger an early
+     termination charge (sky.com/help/articles/cancel-sky-tv). Marking it reversible was wrong:
+     the agent cannot read contract state, so it cannot know what it has committed the customer to. */
+  logAction({ action:'Cancellation requested', reversible:false,
+    reason:'Customer requested cancellation. Completed inline per Ofcom fairness commitment 5. '+
+           'Sky requires 31 days notice and an early termination charge may apply; contract state '+
+           'is not readable here, so this is logged for human review rather than treated as settled.' });
   s.set('ok','done');
   s.add('<b>Scope limit, stated because it matters:</b> the binding rule is One Touch Switch, live '+
     'since September 2024, and it covers broadband and landline, not pay-TV. This is the voluntary '+

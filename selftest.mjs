@@ -61,8 +61,12 @@ ok('no incident matched',        !/INC-20418/.test(r.flow),
 
 console.log('\n=== 5. Existing paths still pass ===');
 r = await drive({msg:'i want to cancel my sky tv'});
-ok('cancellation completes inline', /Cancellation processed/.test(r.log));
-ok('no human queue',                /does not route to a human queue/.test(r.flow));
+ok('cancellation request completes inline', /Cancellation requested/.test(r.log));
+ok('no human queue',                       /does not route to a human queue/.test(r.flow));
+ok('logged NOT reversible',                /not reversible/.test(r.log),
+   '(a cancellation starts a 31-day notice period and may trigger an ETC)');
+ok('the 31-day notice is on screen',       /31 days/.test(r.flow));
+ok('the unreadable contract state is stated', /contract state not readable/.test(r.flow));
 
 r = await drive({msg:'no satellite signal on my box', caller:'R. Doyle', pick:0});
 ok('unauthorised is blocked',       /Not authorised/.test(r.flow));
