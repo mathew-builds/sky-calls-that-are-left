@@ -68,6 +68,34 @@ r = await drive({msg:'no satellite signal on my box', caller:'R. Doyle', pick:0}
 ok('unauthorised is blocked',       /Not authorised/.test(r.flow));
 ok('but still diagnoses and hands over', /Handed to advisor/.test(r.log));
 
+console.log('\n=== 6. Each contact is SEPARATE: the audit log must not accumulate ===');
+/* drive() opens a fresh page per scenario, so it structurally cannot observe state carried
+   between runs. This block reuses ONE page on purpose. */
+{
+  const p = await b.newPage();
+  await p.goto(URL);
+  const runOne = async (msg, pick) => {
+    await p.selectOption('#msg', msg);
+    await p.click('#run');
+    await p.waitForTimeout(1300);
+    if (pick !== null) { const c = p.locator('.choice').first(); if (await c.count()) await c.click(); }
+    await p.waitForTimeout(2200);
+    return {
+      rows: await p.locator('.logrow').count(),
+      first: (await p.locator('.logrow .logtop b').allInnerTexts())[0] || ''
+    };
+  };
+  const a = await runOne('my picture keeps breaking up', 0);
+  ok('first contact logs its action', a.rows === 1);
+  const c = await runOne('i want to cancel my sky tv', null);
+  ok('second contact logs ONLY its own action', c.rows === 1,
+     '(without the reset this is 2 - the previous contact is still in the ledger)');
+  ok('and renumbers from #1',        c.first.startsWith('#1'));
+  ok('and it is the NEW action',     /Cancellation/.test(c.first),
+     '(proves the log was rebuilt, not merely truncated)');
+  await p.close();
+}
+
 console.log('\n' + (fails ? 'FAILURES: '+fails : 'ALL PASS'));
 await b.close();
 process.exit(fails ? 1 : 0);

@@ -31,7 +31,7 @@ demo runs is **mine**. Those steps do not appear in any Sky article, and the dem
 `sky-tv-no-satellite-signal` offers **Sky+, Sky Q and Sky Q Mini** and nothing else.
 
 Sky Q and Sky+ are satellite. Glass and Stream are IP. So the satellite diagnostic does not merely
-differ on an IP platform, **it does not exist** — and a household routinely spans both. That is why
+differ on an IP platform, **it does not exist**, and a household routinely spans both. That is why
 this resolves the *service instance* rather than the account.
 
 ## Everything else cited

@@ -26,7 +26,7 @@ without tidying.
 
 | | |
 |---|---|
-| Files | ~~`index.html` (161), `app.js` (362), `data.js` (132)~~ → now **one file**, 754 lines |
+| Files | ~~`index.html` (161), `app.js` (362), `data.js` (132)~~ → now **one file**, 801 lines |
 | Runs on | Any static host. No server, no build step, no dependencies |
 | Data | 10 real Sky help articles scraped 2026-08-20 (URLs in `SOURCES.md`; article text not reproduced here) |
 | Synthetic | Accounts and service instances. None of that is public |
@@ -55,7 +55,7 @@ descoped polish and robustness in those words.
 The first version had a free-text input for the caller's name, and that value went straight into
 `innerHTML`. A security check fired on the write and flagged it as an XSS pattern.
 
-**Caught by tooling, not by a person. Say it that way.** The fix was not to escape the input, it was
+**Caught by tooling, not by a person.** The fix was not to escape the input, it was
 to remove the free-text surface: callers became a fixed dropdown of three personas. Escaping is also
 in place as a second layer. A demo about acting safely on customer accounts cannot itself ship an
 injection hole, whatever the brief says about robustness.
@@ -113,7 +113,7 @@ it was always tested over HTTP.
 - **Opened from `file://` with no server**, driven by Playwright directly. Renders, no console errors.
   Playwright's MCP wrapper refuses the `file:` scheme; Playwright itself does not, so it was driven
   through Node instead.
-- **`selftest.mjs`: 17 assertions across 6 scenarios, all pass.**
+- **`selftest.mjs`: 21 assertions across 6 scenarios, all pass.**
 - 🔴 **Four of those assertions are positive controls, and they are the point.** The staleness guard
   fires on conflicting reads **and stays quiet on fresh ones**. The outage short-circuit fires when
   toggled on **and stays quiet when toggled off**. Checking that a gate fires proves nothing unless
@@ -168,7 +168,7 @@ identical either way because the first entry keeps its original stamp. Recalibra
 second contact logs **exactly one** entry and renumbers from `#1`. It now passes on the fixed build
 and fails on the pre-fix build.
 
-`selftest.mjs` still reports **17 of 17, zero failures**, re-run after both changes.
+`selftest.mjs` now reports **21 of 21, zero failures**. The four new assertions are scenario 6, which reuses a single page on purpose because the rest of the harness opens a fresh one per scenario and therefore cannot see state carried between contacts. They fail on the pre-fix build, which is the only reason passing on the fixed one means anything.
 
 ### One thing that was deliberately NOT fixed
 

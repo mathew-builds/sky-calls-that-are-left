@@ -15,7 +15,7 @@ direction of travel.)*
 Open `index.html`. That is the whole instruction. One file, no build, no dependencies, no server.
 
 ```
-node selftest.mjs     # 17 assertions across 6 scenarios, needs playwright
+node selftest.mjs     # 21 assertions across 6 scenarios, needs playwright
 ```
 
 ## What is real here and what is not
@@ -50,16 +50,18 @@ counts twice as a win, the dashboard goes green, and actual volume is flat.
   die.
 - **Before go-live:** a labelled sample of real contacts, scored against what advisors actually did.
   Accuracy on the platform-resolution step specifically, because everything downstream depends on it.
-- **After go-live:** a holdout. Sky runs at about 5 Ofcom complaints per 100,000 customers. At that
-  base rate a quality regression caused by this system stays statistically invisible for months
-  unless a comparison group exists. A dashboard will not find it.
+- **After go-live:** a holdout, and the two arguments for it are separate. Complaints are the wrong
+  *instrument*: at about 5 per 100,000 you would need millions of customers per arm before a real
+  change surfaced, so complaint data cannot tell you whether this broke anything. The holdout is
+  about *confounding*: without a group left on the old way you cannot separate what this did from
+  everything else Sky changed that quarter. A dashboard finds neither.
 
 That is the honest gap in most deflection programmes: the headline constraint is "do not break
 quality" and nothing in the design can observe whether quality broke.
 
 ## Testing
 
-`selftest.mjs` drives six scenarios and asserts 17 things. **Four of those assertions are positive
+`selftest.mjs` drives six scenarios and asserts 21 things. **Six of those assertions are positive
 controls**, and they are the point:
 
 - The staleness guard fires on conflicting reads, **and does not fire on fresh ones**
@@ -85,7 +87,7 @@ that was removed rather than escaped.
 
 ## Sources
 
-Sky help pages, scraped 20 August 2026 — URLs in `SOURCES.md`, article text not reproduced · Ofcom complaints data, Q1 2026, published
+Sky help pages, scraped 20 August 2026 (URLs in `SOURCES.md`, article text not reproduced) · Ofcom complaints data, Q1 2026, published
 23 July 2026 · Ofcom Fairness for Customers commitments, 2019, Sky a signatory · One Touch Switch,
 live 12 September 2024, broadband and landline only · EU AI Act Article 50, applies from 2 August
 2026 · UK automated decision-making rules, Data (Use and Access) Act, in force 5 February 2026.

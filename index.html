@@ -410,7 +410,7 @@ var ARCH = [
     ['App and IVR','Same agent, different surface','no']
   ]},
   { n:'Understanding', hint:'the only part that needs a model', nodes:[
-    ['Intent classifier','LLM. Prompt shown in the demo','yes'],
+    ['Intent classifier','LLM. Prompt is real, response is replayed','partial'],
     ['Clarify loop','Ask once when confidence is low','no']
   ]},
   { n:'Identity and authority', hint:'two separate questions', nodes:[
@@ -441,7 +441,7 @@ var ARCH = [
   ]},
   { n:'Audit', hint:'not a log file, a product requirement', nodes:[
     ['Action log with reasons','Every action, why, reversible','yes'],
-    ['Contest and human review','Required where software acts','yes'],
+    ['Contest and human review','Required where software acts. Link is inert here','partial'],
     ['Evaluation harness','Labelled sample plus holdout','no']
   ]}
 ];
@@ -575,9 +575,11 @@ async function resolveInstance(reads){
     s.add('<b>So the agent does not pick one.</b> Guessing Glass runs an IP diagnostic against a box '+
       'that may still be the one in the room. Guessing Q runs a dish check on a device with no dish. '+
       'Either way it asks the customer questions they cannot answer.','line warn-line');
-    s.add('<b>It re-verifies at the point of action instead</b>, and until that returns it will not '+
-      'act on either state. That is the whole difference between a system that reads a warehouse and '+
-      'one that is allowed to change things.','line ok-line');
+    s.add('<b>What it would do next is re-verify at the point of action</b>, rather than trusting '+
+      'either warehouse value. <b>That part is designed, not built</b> (see the architecture tab: '+
+      'Conditional write). Right now the run stops here, which is the safe half. That distinction, '+
+      'reading a warehouse versus being allowed to change things, is the whole design.',
+      'line ok-line');
     logAction({ action:'Refused to act on stale state', reversible:false,
       reason:'Entitlement (billing, 14h) conflicts with device state (telemetry, 14h). Re-verification required before any action.' });
     return null;
@@ -746,7 +748,10 @@ async function run(message,caller){
 }
 
 function finish(){
-  renderStrip(5,5);
+  /* Only mark the steps actually reached. A run that refused to act, matched an outage or
+     skipped instance resolution must NOT render 5-of-5 green: this page's own closing argument
+     is that a dashboard goes green while nothing improved. */
+  renderStrip(5, Math.min(stepIndex, 5));
   var s=step('What this does not know'); s.set('gap','on purpose');
   s.add('<b>1. It cannot see contract state.</b> So it cannot tell an in-contract customer from an '+
     'out-of-contract one.','line gap-line');
