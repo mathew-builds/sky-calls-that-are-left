@@ -293,8 +293,8 @@
   <code>sky.com/help/articles/sky-tv-no-satellite-signal</code>, which offers Sky+, Sky Q and
   Sky Q Mini only. Accounts and service instances are synthetic: none of that is public.
   Classification prompts are real, responses are recorded and replayed, and the prompt is shown
-  on screen. One file, no build, no dependencies. No polish, no error handling, no tests.
-  Deliberately.
+  on screen. One file, no build, no dependencies. No polish and no error handling, deliberately.
+  There is a selftest.mjs in the repo with 24 assertions.
 </footer>
 
 <script>
@@ -366,7 +366,7 @@ var READS = {
   ],
   staleUpgrade:[
     { k:'account',     v:'ACC-4471 · J. Whitfield', src:'CRM',       age:'live',              stale:false },
-    { k:'entitlement', v:'Sky Glass · activated yesterday 16:40', src:'billing', age:'reconciled 03:00 · 14h old', stale:false },
+    { k:'entitlement', v:'Sky Glass · activated yesterday 16:40', src:'billing', age:'live · event-driven', stale:false },
     { k:'device state',v:'Sky Q active · no Glass device seen',   src:'telemetry', age:'reconciled 03:00 · 14h old', stale:true }
   ]
 };
@@ -581,7 +581,7 @@ async function resolveInstance(reads){
       'reading a warehouse versus being allowed to change things, is the whole design.',
       'line ok-line');
     logAction({ action:'Refused to act on stale state', reversible:false,
-      reason:'Entitlement (billing, 14h) conflicts with device state (telemetry, 14h). Re-verification required before any action.' });
+      reason:'Entitlement (billing, live) conflicts with device state (telemetry, 14h). Re-verification required before any action.' });
     return null;
   }
 
@@ -714,16 +714,18 @@ async function run(message,caller){
   auditLog=[]; tick=0; renderLog();
 
   var cls=await classify(message);
-  if(!cls){ finish(); return; }
+  if(!cls){ finish(0); return; }
 
   if(cls.intent==='cancel'){
     var ok=await checkAuthority(caller,true);
     if(ok) await handleCancel();
-    finish(); return;
+    /* Cancelling does not depend on which box, and there is nothing to diagnose. */
+    finish(ok?5:3, ok?[1,3]:[1]); return;
   }
 
   if($('#outage').checked && cls.intent!=='billing'){
-    await outageCheck(); finish(); return;
+    /* Answered from a known incident: the box was never resolved. */
+    await outageCheck(); finish(1); return;
   }
 
   if(!cls.needs){
@@ -731,11 +733,12 @@ async function run(message,caller){
     var s=step('No box involved'); s.set('ok','skipped');
     s.add('This contact does not depend on which box they have, so resolving one would be ceremony. '+
       'Not every contact needs every step.');
-    finish(); return;
+    finish(1,[1]); return;
   }
 
   var instance=await resolveInstance(cls.stale ? READS.staleUpgrade : READS.normal);
-  if(!instance){ finish(); return; }   /* stale conflict stopped it */
+  /* Stale conflict stopped it. The box was NOT resolved, so "Which box" must not go green. */
+  if(!instance){ finish(1); return; }
 
   var authorised=await checkAuthority(caller,cls.acts);
   if($('#showWrong').checked) await diagnoseWrong(instance);
@@ -751,14 +754,16 @@ async function run(message,caller){
   } else {
     await takeAction(d,instance);
   }
-  finish();
+  finish(authorised?5:4);
 }
 
-function finish(){
+function finish(doneTo, skipped){
   /* Only mark the steps actually reached. A run that refused to act, matched an outage or
      skipped instance resolution must NOT render 5-of-5 green: this page's own closing argument
-     is that a dashboard goes green while nothing improved. */
-  renderStrip(5, Math.min(stepIndex, 5));
+     is that a dashboard goes green while nothing improved.
+     doneTo is passed explicitly by each terminal path, because counting rendered cards marks
+     "Which box" green on runs where the box was never resolved. */
+  renderStrip(5, doneTo, skipped);
   var s=step('What this does not know'); s.set('gap','on purpose');
   s.add('<b>1. It cannot see contract state.</b> So it cannot tell an in-contract customer from an '+
     'out-of-contract one.','line gap-line');

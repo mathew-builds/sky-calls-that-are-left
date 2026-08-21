@@ -26,7 +26,7 @@ without tidying.
 
 | | |
 |---|---|
-| Files | ~~`index.html` (161), `app.js` (362), `data.js` (132)~~ → now **one file**, 801 lines |
+| Files | ~~`index.html` (161), `app.js` (362), `data.js` (132)~~ → now **one file** |
 | Runs on | Any static host. No server, no build step, no dependencies |
 | Data | 10 real Sky help articles scraped 2026-08-20 (URLs in `SOURCES.md`; article text not reproduced here) |
 | Synthetic | Accounts and service instances. None of that is public |
@@ -114,7 +114,7 @@ it was always tested over HTTP.
   Playwright's MCP wrapper refuses the `file:` scheme; Playwright itself does not, so it was driven
   through Node instead.
 - **`selftest.mjs`: 24 checks across 6 scenarios, all pass. Five are positive controls.**
-- 🔴 **Four of those assertions are positive controls, and they are the point.** The staleness guard
+- 🔴 **Those five positive controls are the point.** The staleness guard
   fires on conflicting reads **and stays quiet on fresh ones**. The outage short-circuit fires when
   toggled on **and stays quiet when toggled off**. Checking that a gate fires proves nothing unless
   you also check it does not fire when it should not.
